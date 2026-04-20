@@ -1,0 +1,164 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net - Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    
+    // Admin check: Hardcoded email (verified)
+    function isAdmin() { 
+      return isVerified() && request.auth.token.email == 'qiuyuxin325@gmail.com'; 
+    }
+    
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+
+    // --- Feedback ---
+    match /feedback/{feedbackId} {
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin();
+    }
+
+    // --- Entity Validations ---
+
+    function isValidUser(data) {
+      return data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 128
+        && (data.get('displayName', '') == null || data.get('displayName', '') is string)
+        && (data.get('role', 'user') in ['user', 'admin'])
+        && (data.get('plan', 'free') in ['free', 'pro', 'pro_trial'])
+        && (data.get('trialExpiresAt', request.time) is timestamp)
+        && (data.get('hasBrandKit', false) is bool)
+        && (data.get('brandLogo', '') == null || data.get('brandLogo', '') is string)
+        && (data.get('brandColor', '') == null || data.get('brandColor', '') is string);
+    }
+
+    function isValidQuote(data) {
+      return data.userId == request.auth.uid
+        && data.clientName is string && data.clientName.size() <= 200
+        && data.projectName is string && data.projectName.size() <= 300
+        && data.totalAmount is number && data.totalAmount >= 0
+        && data.status in ['draft', 'sent', 'accepted', 'completed', 'cancelled'];
+    }
+
+    function isValidPO(data) {
+      return data.userId == request.auth.uid
+        && data.totalAmount is number && data.totalAmount >= 0
+        && data.status in ['draft', 'sent', 'ordered', 'received', 'cancelled'];
+    }
+
+    function isValidPayment(data) {
+      return data.userId == request.auth.uid
+        && data.quoteId is string && isValidId(data.quoteId)
+        && data.amount is number;
+    }
+
+    function isValidContact(data) {
+      return data.userId == request.auth.uid
+        && data.name is string && data.name.size() <= 200;
+    }
+
+    // --- Collection Matches ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin()) && (
+        isAdmin() ||
+        // Action: Trial Activation (Free -> Pro Trial)
+        (
+          incoming().get('plan', 'free') == 'pro_trial' &&
+          existing().get('plan', 'free') == 'free' &&
+          incoming().get('trialStartedAt', null) != null &&
+          incoming().get('trialExpiresAt', null) != null &&
+          incoming().get('points', 0) == existing().get('points', 0) &&
+          incoming().get('role', 'user') == existing().get('role', 'user')
+        ) ||
+        // Action: Redemption (Points deduction + Flag/Plan update)
+        (
+          (incoming().get('hasBrandKit', false) == true && incoming().get('points', 0) == existing().get('points', 0) - 800) ||
+          (incoming().get('hasAIInsight', false) == true && incoming().get('points', 0) == existing().get('points', 0) - 1200) ||
+          (incoming().get('plan', 'free') == 'pro' && incoming().get('points', 0) == existing().get('points', 0) - 2000)
+        ) ||
+        // Action: General Profile Update
+        (
+          incoming().get('points', 0) == existing().get('points', 0) &&
+          incoming().get('plan', 'free') == existing().get('plan', 'free') &&
+          incoming().get('role', 'user') == existing().get('role', 'user')
+        )
+      );
+    }
+
+    match /quotes/{quoteId} {
+      // Allow public get for sharing, but list/write is private
+      allow get: if true; 
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidQuote(incoming());
+      allow update: if (
+        isAdmin() || 
+        (isOwner(existing().userId) && isValidQuote(incoming()))
+      );
+      allow delete: if isAdmin() || isOwner(existing().userId);
+    }
+
+    match /purchaseOrders/{poId} {
+      allow get: if true;
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidPO(incoming());
+      allow update: if (
+        isAdmin() || 
+        (isOwner(existing().userId) && isValidPO(incoming()))
+      );
+      allow delete: if isAdmin() || isOwner(existing().userId);
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidPayment(incoming()) && exists(/databases/$(database)/documents/quotes/$(incoming().quoteId));
+      allow update: if (
+        isAdmin() || 
+        (isOwner(existing().userId) && isValidPayment(incoming()))
+      );
+      allow delete: if isAdmin() || isOwner(existing().userId);
+    }
+
+    match /clients/{clientId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidContact(incoming());
+      allow update: if (
+        isAdmin() || 
+        (isOwner(existing().userId) && isValidContact(incoming()))
+      );
+      allow delete: if isAdmin() || isOwner(existing().userId);
+    }
+
+    match /suppliers/{supplierId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidContact(incoming());
+      allow update: if (
+        isAdmin() || 
+        (isOwner(existing().userId) && isValidContact(incoming()))
+      );
+      allow delete: if isAdmin() || isOwner(existing().userId);
+    }
+
+    match /aiEstimates/{estimateId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+    }
+
+    match /plans/{planId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

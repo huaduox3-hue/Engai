@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Georgia", serif;
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-bg: #0A0A0A;
+  --color-card: #141414;
+  --color-accent: #C5A059;
+  --color-accent-foreground: #000000;
+  --color-border: #2A2A2A;
+  --color-text-main: #E0E0E0;
+  --color-text-dim: #888888;
+  --color-success: #4CAF50;
+}
+
+body {
+  @apply bg-bg text-text-main font-sans antialiased;
+}
+
+/* Custom transitions */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+    color: black;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .print-p-0 {
+    padding: 0 !important;
+  }
+  .print-shadow-none {
+    box-shadow: none !important;
+  }
+}
+

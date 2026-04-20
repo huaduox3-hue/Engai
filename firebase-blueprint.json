@@ -1,0 +1,192 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and organization details",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "companyName": { "type": "string" },
+        "taxId": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "plan": { "type": "string", "enum": ["free", "pro"] },
+        "points": { "type": "number", "description": "User loyalty points for discounts/referrals" },
+        "referralCode": { "type": "string", "description": "Unique code for this user's referrals" },
+        "referredBy": { "type": "string", "description": "UID of the user who referred this person" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Customer contact information",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "companyName": { "type": "string" },
+        "taxId": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Material supplier contact information",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "phone": { "type": "string" },
+        "fax": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "category": { "type": "string", "description": "e.g., Plumbing, Electrical, Woodwork" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name"]
+    },
+    "EstimationItem": {
+      "title": "Estimation Item",
+      "description": "A single line item in an estimation (material or labor)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["material", "labor", "other"] },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "unitPrice": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "description": { "type": "string" }
+      }
+    },
+    "Quote": {
+      "title": "Quotation",
+      "description": "Professional engineering quotation",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientTaxId": { "type": "string" },
+        "clientPhone": { "type": "string" },
+        "clientAddress": { "type": "string" },
+        "projectName": { "type": "string" },
+        "items": { "type": "array", "items": { "$ref": "EstimationItem" } },
+        "subtotal": { "type": "number" },
+        "taxRate": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["draft", "sent", "accepted", "completed", "cancelled"] },
+        "paymentTerms": { "type": "string" },
+        "receivedAmount": { "type": "number" },
+        "warrantyDuration": { "type": "string", "description": "Warranty period (e.g. 1 Year, 24 Months)" },
+        "warrantyStartDate": { "type": "string", "format": "date", "description": "Date the warranty begins" },
+        "warrantyStatus": { "type": "string", "enum": ["active", "expired", "none"] },
+        "warrantyTerms": { "type": "string", "description": "Customized warranty coverage and exclusions" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "clientName", "totalAmount"]
+    },
+    "PurchaseOrder": {
+      "title": "Purchase Order",
+      "description": "Material procurement order",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "supplierName": { "type": "string" },
+        "items": { "type": "array", "items": { "$ref": "EstimationItem" } },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["ordered", "received", "paid"] },
+        "estimatedDeliveryDate": { "type": "string", "description": "Target delivery date (YYYY-MM-DD)" },
+        "warrantyDuration": { "type": "string", "description": "Supplier warranty period" },
+        "warrantyProvider": { "type": "string", "description": "Entity providing the warranty" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Payment": {
+      "title": "Payment Record",
+      "description": "Record of money received for a quote",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "quoteId": { "type": "string" },
+        "amount": { "type": "number" },
+        "paymentStage": { "type": "string", "enum": ["deposit", "milestone", "final"] },
+        "receivedDate": { "type": "string", "format": "date-time" },
+        "note": { "type": "string" }
+      }
+    },
+    "SupportMessage": {
+      "title": "Support Message",
+      "description": "A message in a support chat session",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "isAdmin": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["text", "system", "image"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "senderId", "text"]
+    },
+    "Plan": {
+      "title": "Subscription Plan",
+      "description": "Definition of a subscription level and its pricing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "monthlyPrice": { "type": "number" },
+        "annualPrice": { "type": "number" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Individual user profiles"
+    },
+    "quotes/{quoteId}": {
+      "schema": "Quote",
+      "description": "Engineering quotations"
+    },
+    "purchaseOrders/{poId}": {
+      "schema": "PurchaseOrder",
+      "description": "Material purchase orders"
+    },
+    "payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Payment transactions related to quotes"
+    },
+    "clients/{clientId}": {
+      "schema": "Client",
+      "description": "User's customer database"
+    },
+    "suppliers/{supplierId}": {
+      "schema": "Supplier",
+      "description": "User's supplier database"
+    },
+    "support_chats/{chatId}/messages/{messageId}": {
+      "schema": "SupportMessage",
+      "description": "Customer support chat messages"
+    },
+    "plans/{planId}": {
+      "schema": "Plan",
+      "description": "Platform subscription plans"
+    }
+  }
+}

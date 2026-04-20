@@ -1,0 +1,21 @@
+{
+  "name": "匠心估價 | 您的口袋工程助手",
+  "short_name": "匠心估價",
+  "description": "一站式工程估價與管理平台：AI 自動拆解工項材料、即時搜尋最新行情、專業報價與採購單管理。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/tool192/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/tool512/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
